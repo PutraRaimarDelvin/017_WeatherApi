@@ -110,6 +110,36 @@ provSug.addEventListener("click", async (e)=>{
 });
 
 
+const kabWrap = document.getElementById("kabWrap");
+const kabEl   = document.getElementById("kabkota");
+
+async function loadKabupaten(idProv){
+    kabWrap.hidden = false;
+    kabEl.innerHTML = `<option value="">Memuat kabupaten/kota...</option>`;
+    kabEl.disabled = true;
+
+    try{
+        const list = await fetchJSON(`${WIL_API}/regencies/${idProv}.json`);
+        kabEl.innerHTML = `<option value="">Pilih Kabupaten/Kota</option>` +
+            list.map(k => `<option value="${k.name}">${k.name}</option>`).join("");
+        kabEl.disabled = false;
+    }catch{
+        kabEl.innerHTML = `<option value="">Gagal memuat kabupaten/kota</option>`;
+    }
+}
+
+// Pilih provinsi → load kabupaten
+provSug.addEventListener("click", async (e)=>{
+    const item = e.target.closest(".suggestion-item"); if(!item) return;
+    const id = item.getAttribute("data-id");
+    const name = item.getAttribute("data-name");
+    selectedProv = { id, name };
+    provInput.value = name;
+    provSug.classList.add("hidden");
+    await loadKabupaten(id);
+});
+
+
 </script>
 </body>
 </html> 
