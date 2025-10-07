@@ -58,6 +58,58 @@ function updateClock(){
 updateClock();
 setInterval(updateClock, 1000);
 
+// ===== UTIL =====
+function debounce(fn, d=300){ let t; return (...a)=>{ clearTimeout(t); t=setTimeout(()=>fn(...a), d); }; }
+const fetchJSON = (url)=>fetch(url).then(r=>r.json());
+
+// ===== Load daftar provinsi =====
+const WIL_API = "https://www.emsifa.com/api-wilayah-indonesia/api";
+let provinsiList = [];
+async function loadProvinsi(){
+    provinsiList = await fetchJSON(`${WIL_API}/provinces.json`);
+}
+loadProvinsi();
+
+// ===== Autocomplete Provinsi =====
+const provInput = document.getElementById("provinsiInput");
+const provSug   = document.getElementById("provSuggestions");
+
+function renderProvSuggestions(items){
+    if(!items.length){
+        provSug.innerHTML = '<div class="suggestion-item muted">Provinsi tidak ditemukan</div>';
+        provSug.classList.remove("hidden");
+        return;
+    }
+    provSug.innerHTML = items.map((p)=>`
+        <div class="suggestion-item" data-id="${p.id}" data-name="${p.name}">
+            <div class="title">${p.name}</div>
+            <div class="sub">Provinsi</div>
+        </div>`).join("");
+    provSug.classList.remove("hidden");
+}
+
+const handleProvInput = debounce((q)=>{
+    selectedProv = null;
+    if(!q || q.trim().length<2){ provSug.classList.add("hidden"); return; }
+    const term = q.toLowerCase();
+    const filtered = provinsiList
+        .filter(p => p.name.toLowerCase().includes(term))
+        .slice(0, 10);
+    renderProvSuggestions(filtered);
+}, 250);
+
+provInput.addEventListener("input", e => handleProvInput(e.target.value));
+
+provSug.addEventListener("click", async (e)=>{
+    const item = e.target.closest(".suggestion-item"); if(!item) return;
+    const id = item.getAttribute("data-id");
+    const name = item.getAttribute("data-name");
+    selectedProv = { id, name };
+    provInput.value = name;
+    provSug.classList.add("hidden");
+});
+
+
 </script>
 </body>
 </html> 
