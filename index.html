@@ -139,6 +139,79 @@ provSug.addEventListener("click", async (e)=>{
     await loadKabupaten(id);
 });
 
+const btnCari  = document.getElementById("btnCari");
+const resultEl = document.getElementById("result");
+const WEATHER_API_KEY = "c401d2e27b38417ab47105453250710";
+const WAPI = "https://api.weatherapi.com/v1";
+
+async function showWeatherByCoords(lat, lon, regionOverride = null) {
+    const url = `${WAPI}/current.json?key=${WEATHER_API_KEY}&q=${lat},${lon}&lang=id`;
+    try {
+        const res = await fetch(url);
+        const data = await res.json();
+        if (data.error) {
+            resultEl.innerHTML = "<b>Error:</b> " + data.error.message;
+            return;
+        }
+        const suhu = data.current?.temp_c ?? "-";
+        const icon = suhu >= 30 ? "☀️" : suhu >= 20 ? "⛅" : suhu >= 10 ? "☁️" : "❄️";
+        const provDisplay = regionOverride || data.location.region || "-";
+
+        resultEl.innerHTML = `
+        <div class="weather-icon">${icon}</div>
+        <div class="info-row"><i>🌍</i><span>Negara:</span><p>${data.location.country}</p></div>
+        <div class="info-row"><i>🗺️</i><span>Provinsi:</span><p>${provDisplay}</p></div>
+        <div class="info-row"><i>🏙️</i><span>Kab/Kota:</span><p>${data.location.name}</p></div>
+        <div class="info-row"><i>🌡️</i><span>Suhu:</span><p>${suhu} °C</p></div>
+        <div class="info-row"><i>📍</i><span>Longitude:</span><p>${data.location.lon}</p></div>
+        <div class="info-row"><i>📍</i><span>Latitude:</span><p>${data.location.lat}</p></div>
+        `;
+    } catch {
+        resultEl.innerHTML = "<b>Error:</b> Gagal terhubung ke server.";
+    }
+}
+
+async function showWeatherKabProv(kabupaten, provinsi) {
+    const q = `${kabupaten}, ${provinsi}, Indonesia`;
+    const list = await fetchJSON(`${WAPI}/search.json?key=${WEATHER_API_KEY}&q=${encodeURIComponent(q)}`);
+    const indo = (Array.isArray(list) ? list : []).filter(it => it.country === "Indonesia");
+    if (!indo.length) {
+        resultEl.innerHTML = "<b>Error:</b> Lokasi tidak ditemukan.";
+        return;
+    }
+    const best = indo[0];
+    await showWeatherByCoords(best.lat, best.lon, provinsi);
+}
+
+async function showWeatherProvOnly(provinsi) {
+    const list = await fetchJSON(`${WAPI}/search.json?key=${WEATHER_API_KEY}&q=${encodeURIComponent(provinsi + ', Indonesia')}`);
+    const indo = (Array.isArray(list) ? list : []).filter(it => it.country === "Indonesia");
+    if (!indo.length) {
+        resultEl.innerHTML = "<b>Error:</b> Provinsi tidak ditemukan.";
+        return;
+    }
+    const best = indo[0];
+    await showWeatherByCoords(best.lat, best.lon, provinsi);
+}
+
+// Klik Cari → prioritas kab/kota, fallback provinsi
+btnCari.addEventListener("click", async ()=>{
+    const kab = kabEl.value;
+    const provName = selectedProv?.name || provInput.value.trim();
+
+    if (!provName) {
+        resultEl.innerHTML = "<b>Info:</b> ketik nama provinsi terlebih dahulu.";
+        return;
+    }
+
+    if (kab) {
+        await showWeatherKabProv(kab, provName);
+    } else {
+        await showWeatherProvOnly(provName);
+    }
+});
+
+
 
 </script>
 </body>
